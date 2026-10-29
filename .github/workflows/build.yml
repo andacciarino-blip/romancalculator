@@ -1,0 +1,70 @@
+name: Compila eseguibili
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - run: pytest -q tests
+
+  build:
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            nome: CalcolatriceRomana-Windows.exe
+            file: dist/CalcolatriceRomana.exe
+          - os: macos-latest
+            nome: CalcolatriceRomana-macOS.zip
+            file: CalcolatriceRomana-macOS.zip
+          - os: ubuntu-latest
+            nome: CalcolatriceRomana-Linux
+            file: dist/CalcolatriceRomana
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller
+      - name: Compila
+        run: pyinstaller --onefile --windowed --name CalcolatriceRomana calcolatrice.py
+      - name: Impacchetta app macOS
+        if: runner.os == 'macOS'
+        run: cd dist && zip -r ../CalcolatriceRomana-macOS.zip CalcolatriceRomana.app
+      - name: Rinomina
+        shell: bash
+        run: |
+          mkdir -p uscita
+          cp "${{ matrix.file }}" "uscita/${{ matrix.nome }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.nome }}
+          path: uscita/${{ matrix.nome }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: uscita
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: uscita/*
