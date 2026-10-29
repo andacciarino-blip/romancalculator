@@ -46,8 +46,3 @@ Test: `pip install pytest && pytest`
 ## Come vengono creati gli eseguibili
 
 Il workflow `.github/workflows/build.yml` compila automaticamente l'app con PyInstaller per Windows, macOS e Linux a ogni push su `main` e pubblica una nuova Release con gli eseguibili. Si può anche avviare a mano da *Actions → Compila eseguibili → Run workflow*.
-
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
